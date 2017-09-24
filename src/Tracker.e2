@@ -1,0 +1,78 @@
+@name Tracker
+@outputs SensorValue:number
+
+MAX_SEARCH_RADIUS = 500
+TIMER_INTERVAL_MS = 80
+
+# Calculates the distance between an Origin vector, and a given Target vector
+# Param (Origin:vector): The origin Vector
+# Param (Target:vector): The Vector we are targeting
+# Returns (number): The distance between the two Vectors
+function number calculateEuclideanDistance(Origin:vector, Target:vector)
+{
+    #combine values into an aggregate vector
+    local AggregateVector = vec((Origin:x() - Target:x()),
+                                (Origin:y() - Target:y()),
+                                (Origin:z() - Target:z()))
+                       
+    #multiply each clause, and sqroot answer 
+    return(sqrt(AggregateVector:x() * AggregateVector:x() + AggregateVector:y() * AggregateVector:y() + AggregateVector:z() * AggregateVector:z()))
+}
+
+# Gets all current player positions as Vectors
+# Returns (array): A list of all active players' position Vector
+function array getAllCurrentPlayerPositions()
+{
+    local ActivePlayers = array()
+    
+    #iterate through all active players, and save positions
+    for(Index = 0, players():count())
+    {
+        local CurrentPlayer = players()[Index, entity]
+        
+        #disclude the owner
+        if(CurrentPlayer == owner())
+        {
+            continue
+        }
+        
+        ActivePlayers:pushVector(CurrentPlayer:pos())       
+    }
+    
+    #return all the active players positions
+    return ActivePlayers
+}
+
+# Renders a holo under each player within a specific radius
+function void renderPlayerPositionMarkers()
+{
+    #collect information required
+    local E2ChipPosition = entity():pos()
+    local ActivePlayers = getAllCurrentPlayerPositions()
+    
+    for(Index = 0, ActivePlayers:count())
+    {
+        #prepare for distance calculations
+        local CurrentPlayerPosition = ActivePlayers[Index, vector]       
+        local Distance = calculateEuclideanDistance(E2ChipPosition, CurrentPlayerPosition)
+        
+        if(Distance < MAX_SEARCH_RADIUS)
+        {
+            #render
+            holoCreate(Index, CurrentPlayerPosition)
+        }                  
+    }
+}
+
+# Primary abstraction of a "point-of-entry" for this program
+function void main()
+{
+    renderPlayerPositionMarkers()
+}
+
+if(clk("main"))
+{   
+    main()
+}
+
+timer("main", TIMER_INTERVAL_MS)
